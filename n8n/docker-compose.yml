@@ -1,0 +1,37 @@
+services:
+  app:
+    image: docker.n8n.io/n8nio/n8n
+    restart: always
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.n8n.entrypoints=websecure
+      - traefik.http.routers.n8n.rule=Host(`n8n.course.aislab.ee.ncku.edu.tw`)
+      - traefik.http.routers.n8n.service=n8n
+      - traefik.http.routers.n8n.tls=true
+      - traefik.http.routers.n8n.tls.certresolver=myresolver
+      - traefik.http.services.n8n.loadbalancer.server.port=443
+      # - traefik.http.middlewares.n8n.headers.SSLRedirect=true
+      # - traefik.http.middlewares.n8n.headers.STSSeconds=315360000
+      # - traefik.http.middlewares.n8n.headers.browserXSSFilter=true
+      # - traefik.http.middlewares.n8n.headers.contentTypeNosniff=true
+      # - traefik.http.middlewares.n8n.headers.forceSTSHeader=true
+      # - traefik.http.middlewares.n8n.headers.SSLHost=course.aislan.ee.ncku.edu.tw
+      # - traefik.http.middlewares.n8n.headers.STSIncludeSubdomains=true
+      # - traefik.http.middlewares.n8n.headers.STSPreload=true
+      # - traefik.http.routers.n8n.middlewares=n8n@docker
+    environment:
+      - N8N_HOST=n8n.course.aislab.ee.ncku.edu.tw
+      - N8N_PORT=443
+      - N8N_PROTOCOL=https
+      - NODE_ENV=production
+      - WEBHOOK_URL=https://n8n.course.aislab.ee.ncku.edu.tw/
+      - GENERIC_TIMEZONE=Asia/Taipei
+    volumes:
+      - data:/home/node/.n8n
+    networks:
+      - traefik-bridge
+volumes:
+  data: {}
+networks:
+  traefik-bridge:
+    external: true

@@ -1,0 +1,30 @@
+services:
+  traefik:
+    # The official v3 Traefik docker image
+    image: traefik:latest
+    container_name: traefik
+    restart: always
+    ports:
+      - "80:80" # HTTP Port
+      - "443:443" # HTTPS Port
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro # Static Configuration
+      # - ./provider:/provider:ro # Dynamic Configuration Files
+      - ./acme.json:/acme.json:rw # For ACME Let's Encrypt
+      # - ./traefik.log:/traefik.log:rw
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-secure.entrypoints=websecure"
+      - "traefik.http.routers.traefik-secure.rule=Host(`traefik.course.aislab.ee.ncku.edu.tw`)"
+      - "traefik.http.routers.traefik-secure.service=api@internal" # This line is important!!! (necessary)
+      - "traefik.http.routers.traefik-secure.tls=true"
+      - "traefik.http.routers.traefik-secure.tls.certresolver=myresolver"
+      - "traefik.http.routers.traefik-secure.middlewares=traefik-secure"
+      - "traefik.http.middlewares.traefik-secure.basicAuth.users=aislab:$$apr1$$EcXN89Ab$$rzpYp1LxFr1bQ9FED8gsg." # use plugin BasicAuth middleware
+      - "traefik.http.services.traefik-secure.loadbalancer.server.port=8080"
+    networks:
+      - net
+networks:
+  net:
+    name: traefik-bridge
