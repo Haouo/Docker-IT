@@ -23,6 +23,6 @@ All of the services are deployed by using Docker Compose.
 
 1. Please firstly edit the `ROOT_DOMAIN` in the `env.shared`.
 2. Because of the docker network dependency, you should **start each compose project in the following order**:
-  1. Traefik
-  2. LDAP Services
-  3. other services
+    1. Traefik
+    2. LDAP Services
+    3. other services
