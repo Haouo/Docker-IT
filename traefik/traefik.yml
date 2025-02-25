@@ -9,21 +9,19 @@ providers:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
     network: reverse-proxy # external network (manually create by docker network create ... command)
-  #file:
-    #directory: "/provider"
-    #watch: true
+  ### file provider is for dynamic configurations
+  ### you have to bind-mount it onto the docker container if you want to use it
+  # file:
+    # directory: "/provider"
+    # watch: true
 
 certificatesResolvers:
   myresolver:
     acme:
-      email: q18131500@gs.ncku.edu.tw
+      email: please.use.your@email.com
       storage: '/acme.json'
       httpChallenge:
         entryPoint: web
 
 api:
-  insecure: true
-
-# log:
-  # filePath: "/traefik.log"
-  # level: DEBUG
+  insecure: false

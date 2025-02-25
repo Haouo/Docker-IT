@@ -1,11 +1,13 @@
 services:
-  app:
+  n8n:
     image: docker.n8n.io/n8nio/n8n
-    restart: always
+    container_name: n8n
+    restart: unless-stopped
+    env_file: ../env.shared
     labels:
       - traefik.enable=true
       - traefik.http.routers.n8n.entrypoints=websecure
-      - traefik.http.routers.n8n.rule=Host(`n8n.course.aislab.ee.ncku.edu.tw`)
+      - traefik.http.routers.n8n.rule=Host(`n8n.${ROOT_DOMAIN}`)
       - traefik.http.routers.n8n.service=n8n
       - traefik.http.routers.n8n.tls=true
       - traefik.http.routers.n8n.tls.certresolver=myresolver
@@ -19,12 +21,13 @@ services:
       # - traefik.http.middlewares.n8n.headers.STSIncludeSubdomains=true
       # - traefik.http.middlewares.n8n.headers.STSPreload=true
       # - traefik.http.routers.n8n.middlewares=n8n@docker
+      - com.centurylinklabs.watchtower.enable=true
     environment:
-      - N8N_HOST=n8n.course.aislab.ee.ncku.edu.tw
+      - N8N_HOST=n8n.{ROOT_DOMAIN}
       - N8N_PORT=443
       - N8N_PROTOCOL=https
       - NODE_ENV=production
-      - WEBHOOK_URL=https://n8n.course.aislab.ee.ncku.edu.tw/
+      - WEBHOOK_URL=https://n8n.${ROOT_DOMAIN}/
       - GENERIC_TIMEZONE=Asia/Taipei
     volumes:
       - data:/home/node/.n8n

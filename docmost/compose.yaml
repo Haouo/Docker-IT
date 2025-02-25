@@ -1,0 +1,64 @@
+services:
+  docmost:
+    image: docmost/docmost:latest
+    depends_on:
+      - db
+      - redis
+    env_file: ../env.shared
+    environment:
+      APP_URL: 'https://docmost.${ROOT_DOMAIN}'
+      APP_SECRET: ''  # TODO: use gen_secret.sh to generate the APP_SECRET
+      DATABASE_URL: 'postgresql://docmost:STRONG_DB_PASSWORD@db:5432/docmost?schema=public'
+      REDIS_URL: 'redis://redis:6379'
+      ### SMTP server setting for sending email
+      MAIL_DRIVER: smtp
+      MAIL_FROM_ADDRESS: "docmost@mail.${ROOT_DOMAIN}" 
+      MAIL_FROM_NAME: "Docmost"
+      SMTP_HOST: "mail.${ROOT_DOMAIN}"
+      SMTP_PORT: 465
+      SMTP_SECURE: true
+      SMTP_USERNAME: "TODO@mail.${ROOT_DOMAIN}" # TODO: you have to create a user in docker-mailserver
+      SMTP_PASSWORD: "TODO" # TODO: before set these two fields: SMTP_USERNAME and SMTP_PASSWORD
+    restart: unless-stopped
+    volumes:
+      - docmost:/app/data/storage
+    networks:
+      - default
+      - traefik-bridge
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.docmost.entrypoints=websecure
+      - traefik.http.routers.docmost.rule=Host(`docmost.course.aislab.ee.ncku.edu.tw`)
+      - traefik.http.routers.docmost.tls=true
+      - traefik.http.routers.docmost.tls.certresolver=myresolver
+      - traefik.http.services.docmost.loadbalancer.server.port=3000
+      - com.centurylinklabs.watchtower.enable=true
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: docmost
+      POSTGRES_USER: docmost
+      POSTGRES_PASSWORD: STRONG_DB_PASSWORD
+    restart: unless-stopped
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - default
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - default
+
+volumes:
+  docmost: {}
+  db_data: {}
+  redis_data: {}
+
+networks:
+  default:
+    external: false
+  traefik-bridge:
+    external: true

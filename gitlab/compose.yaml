@@ -2,58 +2,81 @@ services:
   gitlab:
     image: gitlab/gitlab-ce:latest
     container_name: "gitlab-ce"
-    restart: always
-    hostname: 'course.aislab.ee.ncku.edu.tw'
-    #entrypoint: update-permissions
+    restart: unless-stopped
+    hostname: 'gitlab.internal'
+    env_file: ../env.shared
     environment:
       GITLAB_OMNIBUS_CONFIG: |
-        # basic setting
-        external_url 'https://gitlab.course.aislab.ee.ncku.edu.tw'
+        ### basic setting
+        external_url 'https://gitlab.${ROOT_DOMAIN}'
         gitlab_rails['gitlab_shell_ssh_port'] = 22
-        # network setting
+        ### network setting
         nginx['enable'] = false
         letsencrypt['enable'] = false
         gitlab_workhorse['enable'] = true
         gitlab_workhorse['listen_network'] = 'tcp'
         gitlab_workhorse['listen_addr'] = "0.0.0.0:80"
+        ### integrate with LLDAP
+        # gitlab_rails['ldap_enabled'] = true
+        # gitlab_rails['ldap_servers'] = {
+        #   'main' => {
+        #     'label' => 'LDAP',
+        #     'host' => 'ldap.${ROOT_DOMAIN}',
+        #     'port' => '636',
+        #     'uid' => 'uid',
+        #     'base' => '',
+        #     'encryption': 'simple_tls',
+        #     'bind_dn' => '',
+        #     'password' => '',
+        #     'active_directory' => false,
+        #     'attributes' => {
+        #       'username' => 'uid',
+        #       'email' => 'mail',
+        #       'name' => 'displayName',
+        #       'first_name' => 'givenName',
+        #       'last_name' => 'sn'
+        #     }
+        #   }
+        # }
         # pages setting
-        pages_external_url 'https://pages.course.aislab.ee.ncku.edu.tw'
+        pages_external_url 'https://pages.${ROOT_DOMAIN}'
         gitlab_pages['enable'] = true
         gitlab_pages['listen_proxy'] = "0.0.0.0:81"
         gitlab_pages['access_control'] = true
         gitlab_pages["namespace_in_path"] = true
         pages_nginx['enable'] = false 
         # Container Registry setting
-        registry_external_url 'https://registry.course.aislab.ee.ncku.edu.tw'
+        registry_external_url 'https://registry.${ROOT_DOMAIN}'
         gitlab_rails['registry_enabled'] = true
-        gitlab_rails['api_url'] = 'https://registry.course.aislab.ee.ncku.edu.tw'
+        gitlab_rails['api_url'] = 'https://registry.${ROOT_DOMAIN}'
         registry['enable'] = true
         registry_nginx['enable'] = false
         registry['registry_http_addr'] = "0.0.0.0:5000"
     labels:
       - 'traefik.enable=true'
-      - 'traefik.docker.network=traefik'
       # Gitlab itself
       - 'traefik.http.routers.gitlab.entrypoints=websecure'
-      - 'traefik.http.routers.gitlab.rule=Host(`gitlab.course.aislab.ee.ncku.edu.tw`)'
+      - 'traefik.http.routers.gitlab.rule=Host(`gitlab.${ROOT_DOMAIN}`)'
       - 'traefik.http.routers.gitlab.service=gitlab'
       - 'traefik.http.routers.gitlab.tls=true'
       - 'traefik.http.routers.gitlab.tls.certresolver=myresolver'
       - 'traefik.http.services.gitlab.loadbalancer.server.port=80'
       # Gitlab Pages
       - 'traefik.http.routers.pages.entrypoints=websecure'
-      - 'traefik.http.routers.pages.rule=Host(`pages.course.aislab.ee.ncku.edu.tw`)'
+      - 'traefik.http.routers.pages.rule=Host(`pages.${ROOT_DOMAIN}`)'
       - 'traefik.http.routers.pages.service=pages'
       - 'traefik.http.routers.pages.tls=true'
       - 'traefik.http.routers.pages.tls.certresolver=myresolver'
       - 'traefik.http.services.pages.loadbalancer.server.port=81'
       # Gitlab Container Registry
       - 'traefik.http.routers.registry.entrypoints=websecure'
-      - 'traefik.http.routers.registry.rule=Host(`registry.course.aislab.ee.ncku.edu.tw`)'
+      - 'traefik.http.routers.registry.rule=Host(`registry.{ROOT_DOMAIN}`)'
       - 'traefik.http.routers.registry.service=registry'
       - 'traefik.http.routers.registry.tls=true'
       - 'traefik.http.routers.registry.tls.certresolver=myresolver'
       - 'traefik.http.services.registry.loadbalancer.server.port=5000'
+      # enable watchtower
+      - com.centurylinklabs.watchtower.enable=true
     ports:
       - '22:22' # Custom SSH Port
     volumes:
@@ -62,11 +85,14 @@ services:
       - 'data:/var/opt/gitlab'
     shm_size: '256m'
     networks:
-      - traefik-bridge
+      traefik-bridge:
+      ldap-internal:
 volumes:
   config: {}
   logs: {}
   data: {}
 networks:
   traefik-bridge:
+    external: true
+  ldap-internal:
     external: true

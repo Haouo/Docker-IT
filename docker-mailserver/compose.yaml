@@ -1,0 +1,48 @@
+services:
+  mailserver:
+    image: ghcr.io/docker-mailserver/docker-mailserver:latest
+    container_name: mailserver
+    hostname: mail.${ROOT_DOMAIN}
+    env_file:
+      - ../env.shared
+      - env.mailserver
+    restart: always
+    stop_grace_period: 1m
+    healthcheck:
+      test: "ss --listening --tcp | grep -P 'LISTEN.+:smtp' || exit 1"
+      timeout: 3s
+      retries: 0
+    ports:
+      - "25:25"    # SMTP  (explicit TLS => STARTTLS, Authentication is DISABLED => use port 465/587 instead)
+      - "143:143"  # IMAP4 (explicit TLS => STARTTLS)
+      - "465:465"  # ESMTP (implicit TLS)
+      - "587:587"  # ESMTP (explicit TLS => STARTTLS)
+      - "993:993"  # IMAP4 (implicit TLS)
+    volumes:
+      - data:/var/mail/
+      - state:/var/mail-state/
+      - logs:/var/log/mail/
+      - config:/tmp/docker-mailserver/
+      - /etc/localtime:/etc/localtime:ro
+      - ${PWD}/acme.json:/etc/letsencrypt/acme.json:ro
+  whoami:
+    image: docker.io/traefik/whoami:latest
+    env_file: ../env.shared
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.whoami.rule=Host(`mail.${ROOT_DOMAIN}`)
+      - traefik.http.routers.whoami.tls=true 
+      - traefik.http.routers.whoami.tls.certresolver=myresolver
+      - com.centurylinklabs.watchtower.enable=true
+    networks:
+      - traefik-bridge
+
+volumes:
+  data: {}
+  state: {}
+  logs: {}
+  config: {}
+
+networks:
+  traefik-bridge:
+    external: true

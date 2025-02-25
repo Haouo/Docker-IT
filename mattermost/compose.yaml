@@ -11,6 +11,11 @@ services:
       - /var/run/postgresql
     volumes:
       - dbdata:/var/lib/postgresql/data
+    networks:
+      - internal
+    env_file:
+      - ../env.shared
+      - env.mattermost
     environment:
       # timezone inside container
       - TZ
@@ -28,6 +33,9 @@ services:
       - no-new-privileges:true
     pids_limit: 200
     read_only: ${MATTERMOST_CONTAINER_READONLY}
+    env_file:
+      - ../env.shared
+      - env.mattermost
     tmpfs:
       - /tmp
     volumes:
@@ -57,37 +65,29 @@ services:
     labels:
       # Traefik Settings
       - 'traefik.enable=true'
-      - 'traefik.docker.network=traefik'
       - 'traefik.http.routers.mattermost.entrypoints=websecure'
-      - 'traefik.http.routers.mattermost.rule=Host(`mattermost.course.aislab.ee.ncku.edu.tw`)'
+      - 'traefik.http.routers.mattermost.rule=Host(`mattermost.${ROOT_DOMAIN}`)'
       - 'traefik.http.routers.mattermost.service=mattermost'
       - 'traefik.http.routers.mattermost.tls=true'
       - 'traefik.http.routers.mattermost.tls.certresolver=myresolver'
       - 'traefik.http.services.mattermost.loadbalancer.server.port=8065'
+      - com.centurylinklabs.watchtower.enable=true
     networks:
-      - traefik-bridge
+      internal:
+      traefik-bridge:
     ports:
       - ${CALLS_PORT}:${CALLS_PORT}/udp
       - ${CALLS_PORT}:${CALLS_PORT}/tcp
 volumes:
-  dbdata: {}
-  config: {}
-  data: {}
-  logs: {}
-  plugins: {}
-  client_plugins: {}
-  bleve_indexes: {}
+  dbdata:
+  config:
+  data:
+  logs:
+  plugins:
+  client_plugins:
+  bleve_indexes:
 networks:
+  internal:
+    external: false
   traefik-bridge:
     external: true
-
-# If you use rolling image tags and feel lucky watchtower can automatically pull new images and
-# instantiate containers from it. https://containrrr.dev/watchtower/
-# Please keep in mind watchtower will have access on the docker socket. This can be a security risk.
-#
-#  watchtower:
-#    container_name: watchtower
-#    image: containrrr/watchtower:latest
-#    restart: unless-stopped
-#    volumes:
-#      - /var/run/docker.sock:/var/run/docker.sock

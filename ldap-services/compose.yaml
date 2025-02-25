@@ -1,0 +1,106 @@
+services:
+  openldap:
+    image: osixia/openldap
+    container_name: openldap
+    hostname: ldap.${ROOT_DOMAIN}
+    ports:
+      - "636:636"
+    env_file: ../env.shared
+    environment:
+      - TZ=Asia/Taipei
+      - LDAP_ORGANIZATION="Example Org"
+      - LDAP_DOMAIN=ldap.${ROOT_DOMAIN}
+      - LDAP_ADMIN_PASSWORD=
+      - "LDAP_BASE_DN=" # TODO: you have to set BASE_DN according to your ldap domain
+      ### LDAP TLS Settings
+      - LDAP_TLS=true
+      - LDAP_TLS_CRT_FILENAME=/dump/certs/ldap.${ROOT_DOMAIN}.crt
+      - LDAP_TLS_KEY_FILENAME=/dump/private/ldap.${ROOT_DOMAIN}.key
+      - LDAP_TLS_CA_CRT_FILENAME=ca.pem
+      - LDAP_TLS_VERIFY_CLIENT=try
+      ### watower settings
+      - com.centurylinklabs.watchtower.enable=true
+    volumes:
+      - data:/var/lib/ldap
+      - config:/etc/ldap/slapd.d
+      - ${PWD}/certs:/container/service/slapd/assets/certs
+    networks:
+      - ldap
+  webui:
+    image: osixia/phpldapadmin:latest
+    container_name: phpldapadmin
+    env_file: ../env.shared
+    environment:
+      TZ: Asia/Taipei
+      PHPLDAPADMIN_LDAP_HOSTS: openldap
+      PHPLDAPADMIN_HTTPS: false
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.phpldapadmin.entrypoints=websecure
+      - traefik.http.routers.phpldapadmin.rule=Host(`phpldapadmin.${ROOT_DOMAIN}`)
+      - traefik.http.routers.phpldapadmin.tls=true
+      - traefik.http.routers.phpldapadmin.tls.certresolver=myresolver
+      - traefik.http.routers.phpldapadmin.service=phpldapadmin
+      - traefik.http.services.phpldapadmin.loadbalancer.server.port=80
+    networks:
+      - ldap
+      - traefik-bridge
+  ### LDAP Tool Box Self Service Password
+  change-passwd:
+    image: docker.io/ltbproject/self-service-password:latest
+    container_name: self-service-password
+    env_file: ../env.shared
+    environment:
+      TZ: Asia/Taipei
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.ssp.entrypoints=websecure
+      - traefik.http.routers.ssp.rule=Host(`ssp.${ROOT_DOMAIN}`)
+      - traefik.http.routers.ssp.tls=true
+      - traefik.http.routers.ssp.tls.certresolver=myresolver
+      - com.centurylinklabs.watchtower.enable=true
+    volumes:
+      - ${PWD}/ssp.conf.php:/var/www/conf/config.inc.local.php
+    networks:
+      - ldap
+      - traefik-bridge
+  ### the whoami iamge is used only for traefik letsecrypt
+  whoami:
+    image: docker.io/traefik/whoami:latest
+    env_file: ../env.shared
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.whoami-ldap.rule=Host(`ldap.${ROOT_DOMAIN}`)
+      - traefik.http.routers.whoami-ldap.tls=true
+      - traefik.http.routers.whoami-ldap.tls.certresolver=myresolver
+      - com.centurylinklabs.watchtower.enable=true
+    networks:
+      - traefik-bridge
+  ### certs-dumper is used to dump the cert files from traefik's acme.json
+  certs-dumper:
+    image: ldez/traefik-certs-dumper:latest
+    container_name: traefik-certs-dumper
+    entrypoint: sh -c '
+      while ! [ -e /data/acme.json ]
+      || ! [ `jq ".[] | .Certificates | length" /data/acme.json | jq -s "add" ` != 0 ]; do
+      sleep 1
+      ; done
+      && traefik-certs-dumper file --version v2 --watch
+        --source /data/acme.json --dest /certs/dump'
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    volumes:
+      - ${PWD}/acme.json:/data/acme.json:ro
+      - ${PWD}/certs:/certs
+
+networks:
+  ldap:
+    name: ldap-internal
+  traefik-bridge:
+    external: true
+
+volumes:
+  data: {}
+  config: {}
+  go-ldap-admin: {}
+
