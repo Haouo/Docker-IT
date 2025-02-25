@@ -28,7 +28,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.docmost.entrypoints=websecure
-      - traefik.http.routers.docmost.rule=Host(`docmost.course.aislab.ee.ncku.edu.tw`)
+      - traefik.http.routers.docmost.rule=Host(`docmost.${ROOT_DOMAIN}`)
       - traefik.http.routers.docmost.tls=true
       - traefik.http.routers.docmost.tls.certresolver=myresolver
       - traefik.http.services.docmost.loadbalancer.server.port=3000
