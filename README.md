@@ -1,7 +1,5 @@
 # Docker-IT
 
-[toc]
-
 ## Introdution
 
 This project groups many services which are useful for labolatory/team IT management. It includes the following services:
@@ -12,9 +10,9 @@ This project groups many services which are useful for labolatory/team IT manage
 4. n8n
 5. nocodb
 6. LDAP Services
-  - OpenLDAP
-  - phpLDAPadmin
-  - self-service-password
+    - OpenLDAP
+    - phpLDAPadmin
+    - self-service-password
 7. docker-mailserver
 8. Traefik
 9. Watchtower
